@@ -1,7 +1,7 @@
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import com.codeborne.selenide.CollectionCondition;
+import com.codeborne.selenide.Condition;
+import com.codeborne.selenide.WebDriverRunner;
+import org.junit.*;
 import org.openqa.selenium.By;
 import org.openqa.selenium.Keys;
 import org.openqa.selenium.WebDriver;
@@ -14,70 +14,73 @@ import javax.swing.*;
 import java.security.Key;
 import java.util.concurrent.TimeUnit;
 
+import static com.codeborne.selenide.CollectionCondition.*;
+import static com.codeborne.selenide.Condition.text;
+import static com.codeborne.selenide.Condition.visible;
+import static com.codeborne.selenide.Configuration.baseUrl;
+import static com.codeborne.selenide.Configuration.browser;
+
 public class SignUpTest {
-    private WebDriver driver;
     private SignUpPage signUpPage;
 
 
-    @Before
-    public void setUp(){
+    @BeforeClass
+    public static void setUp(){
         System.setProperty("webdriver.gecko.driver", "/Users/astemirpachev/SelenideExample/src/geckodriver");
-        driver = new FirefoxDriver();
-        driver.manage().timeouts().implicitlyWait(10, TimeUnit.SECONDS);
-        driver.get("https://www.spotify.com/int/signup");
+        baseUrl = "https://www.spotify.com/int/signup";
+        //browser = "marionette";
+        WebDriverRunner.setWebDriver(new FirefoxDriver());
     }
 
 
 
     @Test
     public void typeInvalidYear(){
-        signUpPage = new SignUpPage(driver);
+        signUpPage = new SignUpPage();
 
-        signUpPage.setMonth("December");
-        signUpPage.typeDay("20");
+        signUpPage.open()
+                .setMonth("December")
+                .typeDay("20")
+                .typeYear("85")
+                .setShare(true);
 
-        Actions actions = new Actions(driver);
-        actions.click().build().perform();
-
-        signUpPage.typeYear("85");
-        signUpPage.setShare(true);
-
-        Assert.assertTrue(signUpPage.isErrorVisible("Please enter a valid year."));
-
-        Assert.assertFalse(signUpPage.isErrorVisible("When were you born?"));
+        signUpPage.getError("Please enter a valid year.").shouldBe(visible);
+        signUpPage.getError("When were you born?").shouldNotBe(visible);
     }
 
 
     @Test
     public void typeInvalidEmail(){
-        signUpPage = new SignUpPage(driver);
-        signUpPage.typeEmail("test@mail.test")
+        signUpPage = new SignUpPage();
+        signUpPage.open()
+                .typeEmail("test@mail.test")
                 .typeConfirmEmail("nottest@mail.nottest")
                 .typeName("Ivan")
                 .clickSignUpButton();
 
-        Assert.assertTrue(signUpPage.isErrorVisible("Email address doesn't match."));
-
+        signUpPage.getError("Email address doesn't match.").shouldBe(visible);
     }
 
 
     @Test
     public void signUpWithEmptyPassword(){
-        signUpPage = new SignUpPage(driver);
-        signUpPage.typeEmail("test@mail.test")
+        signUpPage = new SignUpPage();
+        signUpPage.open()
+                .typeEmail("test@mail.test")
                 .typeConfirmEmail("test@mail.test")
                 .typeName("Ivan")
                 .clickSignUpButton();
 
-        Assert.assertTrue(signUpPage.isErrorVisible("Please choose a password."));
+        signUpPage.getError("Please choose a password.").shouldBe(visible);
 
     }
 
 
     @Test
     public void typeInvalidValues(){
-        signUpPage = new SignUpPage(driver);
-        signUpPage.typeEmail("testmail")
+        signUpPage = new SignUpPage();
+        signUpPage.open()
+                .typeEmail("testmail")
                 .typeConfirmEmail("test@mail.test")
                 .typePassword("aezakmi000")
                 .typeName("Ivan")
@@ -85,15 +88,9 @@ public class SignUpTest {
                 .setShare(false)
                 .clickSignUpButton();
 
-        Assert.assertEquals(4, signUpPage.getErrors().size());
-        Assert.assertEquals("When were you born?", signUpPage.getErrorByNumber(3));
+        signUpPage.getErrors().shouldHave(size(4));
+        signUpPage.getErrorByNumber(3).shouldHave(text("When were you born?"));
     }
 
-
-
-    @After
-    public void tearDown(){
-        driver.quit();
-    }
 
 }
